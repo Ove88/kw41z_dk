@@ -1,0 +1,49 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            // Start Commnand line JLink GDB server: JLinkGDBServerCL -select USB -device MKW41Z512xxx4 -if SWD -speed auto -noir
+            "name": "C++ Attach",
+            "type": "cppdbg",
+            "request": "attach",
+            "processName": "JLinkGDBServerCL.exe",
+            "program": "${workspaceRoot}/BUILD/${workspaceRootFolderName}.elf",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${workspaceRoot}",
+            "environment": [],
+            "externalConsole": false,
+            "serverLaunchTimeout": 10000,
+            "filterStderr": true,
+            "filterStdout": false,
+            "serverStarted": "GDB/ server/ started",
+            "preLaunchTask": "make",
+            "setupCommands": [
+                { "text": "-target-select remote localhost:2331", "description": "connect to target", "ignoreFailures": false },
+                { "text": "-file-exec-and-symbols C:/Users/ons/.vscode/kw41z_dk/BUILD/kw41z_dk.elf", "description": "load file", "ignoreFailures": false},
+                { "text": "-interpreter-exec console \"monitor endian little\"", "ignoreFailures": false },
+                { "text": "-interpreter-exec console \"monitor reset\"", "ignoreFailures": false },
+                { "text": "-interpreter-exec console \"monitor halt\"", "ignoreFailures": false },
+                { "text": "-interpreter-exec console \"monitor arm semihosting enable\"", "ignoreFailures": false },
+                { "text": "-target-download", "description": "flash target", "ignoreFailures": false }
+            ],
+            "logging": {
+                "moduleLoad": true,
+                "trace": true,
+                "engineLogging": true,
+                "programOutput": true,
+                "exceptions": true
+            },
+             "windows": {
+                "MIMode": "gdb",
+                "MIDebuggerPath": "arm-none-eabi-gdb.exe",
+                "setupCommands": [
+                    { "text": "-target-select remote localhost:2331", "description": "connect to target", "ignoreFailures": false },
+                    { "text": "-file-exec-and-symbols C:/Users/ons/.vscode/kw41z_dk/BUILD/kw41z_dk.elf", "description": "load file", "ignoreFailures": false},
+                    { "text": "-target-download", "description": "flash target", "ignoreFailures": false }
+                ]
+            }
+        }
+    ]
+}
