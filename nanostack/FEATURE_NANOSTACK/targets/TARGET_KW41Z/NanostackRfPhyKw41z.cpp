@@ -7,7 +7,7 @@
 #include "platform/arm_hal_interrupt.h"
 #include "nanostack/platform/arm_hal_phy.h"
 
-
+#include "PhyInterface.h"
 
 static uint8_t mac_address[8];
 static phy_device_driver_s device_driver;
@@ -21,29 +21,41 @@ static phy_device_channel_page_s phy_channel_pages[] = {
     {CHANNEL_PAGE_0, NULL}
 };
 
+/* ARM_NWK_HAL prototypes */
+static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_ptr);
+static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_t rf_channel);
+static int8_t rf_address_write(phy_address_type_e address_type, uint8_t *address_ptr);
+static int8_t rf_start_cca(uint8_t *data_ptr, uint16_t data_length, uint8_t tx_handle, data_protocol_e data_protocol );
+
+/*============ CODE =========*/
+
+/*
+ * \brief Function initialises and registers the RF driver.
+ *
+ * \param none
+ *
+ * \return rf_radio_driver_id Driver ID given by NET library
+ */
 int8_t rf_device_register(void)
 {
     /* Do some initialization */
-    rf_init();
+    Phy_Init();
+
+    /* Get real MAC address */
+    /* MAC is stored MSB first */
+    memcpy(MAC_address, (const void*)MAC_MSB, 4);
+    memcpy(&MAC_address[4], (const void*)MAC_LSB, 4);
+
     /* Set pointer to MAC address */
     device_driver.PHY_MAC = mac_address;
     /* Set driver Name */
-    device_driver.driver_description = "Example";
+    device_driver.driver_description = "KW41Z_Phy";
 
-    if(subghz_radio) /* Configuration for Sub GHz Radio */
-    {
-        /*Type of RF PHY is SubGHz*/
-        device_driver.link_type = PHY_LINK_15_4_SUBGHZ_TYPE;
-        phy_channel_pages[0].channel_page = CHANNEL_PAGE_2;
-        phy_channel_pages[0].rf_channel_configuration = &phy_subghz;
-    }
-    else /* Configuration for 2.4 GHz Radio */
-    {
-        /*Type of RF PHY is 2.4 GHz*/
-        device_driver.link_type = PHY_LINK_15_4_2_4GHZ_TYPE;
-        phy_channel_pages[0].channel_page = CHANNEL_PAGE_0;
-        phy_channel_pages[0].rf_channel_configuration = &phy_2_4ghz;
-    }
+    /*Type of RF PHY is 2.4 GHz*/
+    device_driver.link_type = PHY_LINK_15_4_2_4GHZ_TYPE;
+    phy_channel_pages[0].channel_page = CHANNEL_PAGE_0;
+    phy_channel_pages[0].rf_channel_configuration = &phy_2_4ghz;
+    
 
     /*Maximum size of payload is 127*/
     device_driver.phy_MTU = 127;
@@ -69,6 +81,18 @@ int8_t rf_device_register(void)
     rf_radio_driver_id = arm_net_phy_register(&device_driver);
 
     return rf_radio_driver_id;
+}
+
+/*
+ * \brief Function unregisters the RF driver.
+ *
+ * \param none
+ *
+ * \return none
+ */
+static void rf_device_unregister(void)
+{
+    arm_net_phy_unregister(rf_radio_driver_id);
 }
 
 void rf_handle_rx_end(void)
@@ -97,6 +121,15 @@ void rf_handle_rx_end(void)
     }
 }
 
+/*
+ * \brief Function starts the CCA process before starting data transmission and copies the data to RF TX FIFO.
+ *
+ * \param data_ptr Pointer to TX data
+ * \param data_length Length of the TX data
+ * \param tx_handle Handle to transmission
+ * \return 0 Success
+ * \return -1 Busy
+ */
 int8_t rf_start_cca(uint8_t *data_ptr, uint16_t data_length, uint8_t tx_handle, data_protocol_e data_protocol)
 {
     /*Check if transmitter is busy*/
@@ -202,4 +235,100 @@ static int8_t rf_address_write(phy_address_type_e address_type, uint8_t *address
     }
 
     return 0;
+}
+
+
+/*****************************************************************************/
+/*****************************************************************************/
+
+static void rf_if_lock(void)
+{
+    platform_enter_critical();
+}
+
+static void rf_if_unlock(void)
+{
+    platform_exit_critical();
+}
+
+NanostackRfPhyKw41z::NanostackRfPhyKw41z() : NanostackRfPhy()
+{
+    // Do nothing
+}
+
+NanostackRfPhyKw41z::~NanostackRfPhyKw41z()
+{
+    rf_unregister();
+}
+
+int8_t NanostackRfPhyKw41z::rf_register()
+{
+
+    rf_if_lock();
+
+    if (rf != NULL) {
+        rf_if_unlock();
+        error("Multiple registrations of NanostackRfPhyKw41z not supported");
+        return -1;
+    }
+
+    int8_t radio_id = rf_device_register();
+    if (radio_id < 0) {
+        rf = NULL;
+    } else {
+        rf = this;
+    }
+
+    rf_if_unlock();
+    return radio_id;
+}
+
+void NanostackRfPhyKw41z::rf_unregister()
+{
+    rf_if_lock();
+
+    if (rf != this) {
+        rf_if_unlock();
+        return;
+    }
+
+    rf_device_unregister();
+    rf = NULL;
+
+    rf_if_unlock();
+}
+
+void NanostackRfPhyKw41z::get_mac_address(uint8_t *mac)
+{
+    rf_if_lock();
+
+    memcpy(mac, MAC_address, sizeof(MAC_address));
+
+    rf_if_unlock();
+}
+
+void NanostackRfPhyKw41z::set_mac_address(uint8_t *mac)
+{
+    rf_if_lock();
+
+    if (NULL != rf) {
+        error("NanostackRfPhyKw41z cannot change mac address when running");
+        rf_if_unlock();
+        return;
+    }
+    
+    memcpy(MAC_address, mac, sizeof(MAC_address));
+
+    rf_if_unlock();
+}
+
+uint32_t NanostackRfPhyKw41z::get_driver_version()
+// {
+//     RAIL_Version_t railversion;
+//     RAIL_VersionGet(&railversion, true);
+
+//     return (railversion.major << 24) |
+//            (railversion.minor << 16) |
+//            (railversion.rev   << 8)  |
+//            (railversion.build);
 }

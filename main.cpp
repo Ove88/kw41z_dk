@@ -1,6 +1,7 @@
 #include "mbed.h"
 #include "NanostackInterface.h"
 #include "ThreadInterface.h"
+#include "PhyInterface.h"
 
 
 
@@ -10,6 +11,7 @@ int main() {
     
     while(true)
     {
+        SystemCoreClock 
         led = 1;
         wait(2.0);
         led = 0;

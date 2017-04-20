@@ -20,10 +20,10 @@
 #include "mbed.h"
 #include "NanostackRfPhy.h"
 
-class NanostackRfPhyNcs36510 : public NanostackRfPhy {
+class NanostackRfPhyKw41z : public NanostackRfPhy {
 public:
-    NanostackRfPhyNcs36510();
-    ~NanostackRfPhyNcs36510();
+    NanostackRfPhyKw41z();
+    ~NanostackRfPhyKw41z();
     int8_t rf_register();
     void rf_unregister();
     void get_mac_address(uint8_t *mac);
