@@ -71,13 +71,17 @@ INCLUDE_PATHS += -I../netsocket
 INCLUDE_PATHS += -I../events
 INCLUDE_PATHS += -I../events/equeue
 INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/nanostack-interface
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/mbed-mesh-api\mbed-mesh-api
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/sal-stack-nanostack\nanostack
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/sal-stack-nanostack\nanostack\platform
+INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/mbed-mesh-api/mbed-mesh-api
+INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/mbed-mesh-api/mbed-mesh-api/source/include
+INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/sal-stack-nanostack/nanostack
+INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/sal-stack-nanostack/nanostack/platform
+INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/targets
+INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/coap-service/coap-service
+INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/coap-service/source/include
 
 
-LIBRARY_PATHS := -L../TARGET_KW41Z/TOOLCHAIN_GCC_ARM 
-LIBRARIES := -l:libmbed-os.a # -l:libnanostack_armcc_Cortex-M0_nanostack_full.ar
+LIBRARY_PATHS := -L../TARGET_KW41Z/TOOLCHAIN_GCC_ARM  -L../nanostack/FEATURE_NANOSTACK_FULL/TOOLCHAIN_ARM/TARGET_LIKE_CORTEX_M0
+LIBRARIES := -l:libmbed-os.a  -l:libnanostack_armcc_Cortex-M0_nanostack_full.ar
 LINKER_SCRIPT ?= ../TARGET_KW41Z/TOOLCHAIN_GCC_ARM/MKW41Z512xxx4.ld
 
 # Objects and Paths
