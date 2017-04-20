@@ -40,7 +40,7 @@
                 "MIDebuggerPath": "arm-none-eabi-gdb.exe",
                 "setupCommands": [
                     { "text": "-target-select remote localhost:2331", "description": "connect to target", "ignoreFailures": false },
-                    { "text": "-file-exec-and-symbols C:/Users/ons/.vscode/kw41z_dk/BUILD/kw41z_dk.elf", "description": "load file", "ignoreFailures": false},
+                    { "text": "-file-exec-and-symbols C:/Users/ons/.vscode/Projects/kw41z_dk/BUILD/kw41z_dk.elf", "description": "load file", "ignoreFailures": false},
                     { "text": "-target-download", "description": "flash target", "ignoreFailures": false }
                 ]
             }
