@@ -49,6 +49,10 @@
 #include "events/mbed_events.h"
 #endif
 
+#if MBED_CONF_NANOSTACK_PRESENT
+#include "nanostack/nanostack.h"
+#endif
+
 #include "platform/toolchain.h"
 #include "platform/platform.h"
 

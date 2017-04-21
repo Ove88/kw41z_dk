@@ -13,5 +13,6 @@
 #define MBED_CONF_RTOS_PRESENT                      1    // set by library:rtos
 #define MBED_CONF_NSAPI_PRESENT                     1
 #define MBED_CONF_EVENTS_PRESENT                    1
+#define MBED_CONF_NANOSTACK_PRESENT                 1
 
 #endif
