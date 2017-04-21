@@ -5,16 +5,19 @@
 
 
 
-DigitalOut led(LED1);
+DigitalOut led = {LED1};
+InterruptIn g = {LED2};
+Timer gf;
+Thread th;
 
 int main() {
-    
+    Phy_Init();
     while(true)
     {
-        SystemCoreClock 
-        led = 1;
-        wait(2.0);
-        led = 0;
-        wait(1);
+       
+       led = 1;
+       wait(2.0);
+       led = 0;
+       wait(1);
     }
 }

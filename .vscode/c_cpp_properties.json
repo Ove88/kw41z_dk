@@ -25,12 +25,12 @@
         {
             "name": "Win32",
             "includePath": [
-              "netsocket/",
-              "drivers/",
-              "rtos/"
+              "${workspaceRoot}",
+              "${workspaceRoot}/TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/TARGET_FRDM",
+              "${workspaceRoot}/platform/*"
             ],
             "browse": {
-                "limitSymbolsToIncludedHeaders": true,
+                "limitSymbolsToIncludedHeaders": false,
                 "databaseFilename": ""
             }
         }

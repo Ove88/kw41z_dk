@@ -1,0 +1,2 @@
+-include -I/TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/TARGET_FRDM
+-include -I/platform
