@@ -61,6 +61,7 @@ OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wir
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/MemManager.o
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/Panic.o
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/Flash_Adapter.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/fsl_os_abstraction.o
 
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr.o
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_trim.o
