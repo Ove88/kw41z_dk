@@ -2,11 +2,11 @@
 *
 */
 
-#include "NanostackRfPhyKw41z.h"
 #include "ns_types.h"
-#include "platform/arm_hal_interrupt.h"
-#include "nanostack/platform/arm_hal_phy.h"
+#include "arm_hal_interrupt.h"
+#include "arm_hal_phy.h"
 
+#include "NanostackRfPhyKw41z.h"
 #include "PhyInterface.h"
 
 static uint8_t mac_address[8];

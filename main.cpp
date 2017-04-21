@@ -1,11 +1,16 @@
 #include "mbed.h"
 
-DigitalOut led = {LED1};
-InterruptIn g = {LED2};
+DigitalOut led = LED1;
+InterruptIn btn = SW3;
 
-ThreadInterface fg;
 NanostackRfPhyKw41z rfPhy;
-int main() {
+ThreadInterface network;
+
+void threadConnect();
+
+int main() 
+{
+   threadConnect();
 
     while(true)
     {
@@ -14,4 +19,12 @@ int main() {
        led = 0;
        wait(1);
     }
+}
+
+void threadConnect()
+{
+    rfPhy.rf_register();
+    network.initialize(&rfPhy);
+    network.connect();
+
 }
