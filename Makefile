@@ -125,7 +125,7 @@ LINKER_SCRIPT ?= ../TARGET_KW41Z/TOOLCHAIN_GCC_ARM/MKW41Z512xxx4.ld
 
 AS      = 'arm-none-eabi-gcc' '-x' 'assembler-with-cpp' '-c' '-Wall' '-Wextra' '-Wno-unused-parameter' '-Wno-missing-field-initializers' '-fmessage-length=0' '-fno-exceptions' '-fno-builtin' '-ffunction-sections' '-fdata-sections' '-funsigned-char' '-MMD' '-fno-delete-null-pointer-checks' '-fomit-frame-pointer' '-O0' '-g3' '-mcpu=cortex-m0plus' '-mthumb'
 CC      = 'arm-none-eabi-gcc' '-std=gnu99' '-c' '-Wall' '-Wextra' '-Wno-unused-parameter' '-Wno-missing-field-initializers' '-fmessage-length=0' '-fno-exceptions' '-fno-builtin' '-ffunction-sections' '-fdata-sections' '-funsigned-char' '-MMD' '-fno-delete-null-pointer-checks' '-fomit-frame-pointer' '-O0' '-g3' '-mcpu=cortex-m0plus' '-mthumb'
-CPP     = 'arm-none-eabi-g++' '-std=gnu++98' '-fno-rtti' '-Wvla' '-c' '-Wall' '-Wextra' '-Wno-unused-parameter' '-Wno-missing-field-initializers' '-fmessage-length=0' '-fno-exceptions' '-fno-builtin' '-ffunction-sections' '-fdata-sections' '-funsigned-char' '-MMD' '-fno-delete-null-pointer-checks' '-fomit-frame-pointer' '-O0' '-g3' '-mcpu=cortex-m0plus' '-mthumb'
+CPP     = 'arm-none-eabi-g++' '-std=gnu++11' '-fno-rtti' '-Wvla' '-c' '-Wall' '-Wextra' '-Wno-unused-parameter' '-Wno-missing-field-initializers' '-fmessage-length=0' '-fno-exceptions' '-fno-builtin' '-ffunction-sections' '-fdata-sections' '-funsigned-char' '-MMD' '-fno-delete-null-pointer-checks' '-fomit-frame-pointer' '-O0' '-g3' '-mcpu=cortex-m0plus' '-mthumb'
 LD      = 'arm-none-eabi-gcc' '-Wl,--gc-sections' '-mcpu=cortex-m0plus' '-mthumb'
 ELF2BIN = 'arm-none-eabi-objcopy'
 
@@ -173,7 +173,7 @@ C_FLAGS += -DTARGET_LIKE_CORTEX_M0
 C_FLAGS += -include
 C_FLAGS += mbed_config.h
 
-CXX_FLAGS += -std=gnu++98
+CXX_FLAGS += -std=gnu++11
 CXX_FLAGS += -fno-rtti
 CXX_FLAGS += -Wvla
 CXX_FLAGS += -DTARGET_KSDK2_MCUS
