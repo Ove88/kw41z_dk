@@ -47,17 +47,37 @@ PROJECT := kw41z_dk
 # Objects and Paths
 
 OBJECTS += main.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/ASP.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/MPM.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyISR.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyPacketProcessor.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyPlmeData.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyStateMachine.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyTime.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/FunctionLib.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/Messaging.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/GenericList.o
-OBJECTS += ../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/MemManager.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/ASP.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/MPM.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyISR.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyPacketProcessor.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyPlmeData.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyStateMachine.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyTime.o
+
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/FunctionLib.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/Messaging.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/GenericList.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/MemManager.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/Panic.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/source/Flash_Adapter.o
+
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_trim.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/ifr_radio.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/dbg_ram_capture.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_ant_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_ble_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_common_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_gfsk_bt_0p3_h_0p5_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_gfsk_bt_0p5_h_0p5_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_gfsk_bt_0p5_h_0p7_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_gfsk_bt_0p5_h_0p32_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_gfsk_bt_0p5_h_1p0_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_gfsk_bt_0p7_h_0p5_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_mode_datarate_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_msk_config.o
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/source/fsl_xcvr_zgbe_config.o
 
 
  SYS_OBJECTS += TARGET_KW41Z/TOOLCHAIN_GCC_ARM/startup_MKW41Z4.o
@@ -73,7 +93,7 @@ INCLUDE_PATHS += -I../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGE
 INCLUDE_PATHS += -I../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/drivers
 INCLUDE_PATHS += -I../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/rf_phy
 INCLUDE_PATHS += -I../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/framework_5.3.2
-INCLUDE_PATHS += -I../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR
+INCLUDE_PATHS += -I../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/framework_5.3.2/XCVR/XCVR
 INCLUDE_PATHS += -I../TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/api
 INCLUDE_PATHS += -I../TARGET_KW41Z/TOOLCHAIN_GCC_ARM
 INCLUDE_PATHS += -I../drivers

@@ -39,7 +39,6 @@
 #include "EmbeddedTypes.h"
 #include "MpmInterface.h"
 #include "FunctionLib.h"
-#include "fsl_gpio.h"
 
 #include "Phy.h"
 #include "fsl_xcvr.h"
@@ -48,6 +47,7 @@
 #include "fsl_os_abstraction.h"
 #include "fsl_device_registers.h"
 #include "Flash_Adapter.h"
+#include "system_MKW41Z4.h"
 
 /*! *********************************************************************************
 *************************************************************************************
@@ -197,7 +197,7 @@ void
     /* DSM settings */
     phyReg = (RSIM->RF_OSC_CTRL & RSIM_RF_OSC_CTRL_BB_XTAL_READY_COUNT_SEL_MASK) >> 
              RSIM_RF_OSC_CTRL_BB_XTAL_READY_COUNT_SEL_SHIFT;
-    phyReg = (1024U << phyReg) / (CORE_CLOCK_FREQ / 32768) + 1;
+    phyReg = (1024U << phyReg) / (SystemCoreClock / 32768) + 1;
     RSIM->DSM_OSC_OFFSET = phyReg;
 
     /* Install PHY ISR */
