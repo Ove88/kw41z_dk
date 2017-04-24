@@ -47,7 +47,17 @@ PROJECT := kw41z_dk
 # Objects and Paths
 
 OBJECTS += main.o
-OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/ASP.o
+
+# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/CallbackHandler.o
+# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/NanostackEthernetInterface.o
+# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/LoWPANNDInterface.o
+# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/ThreadInterface.o
+# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/MeshInterfaceNanostack.o
+# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/mesh_system.o
+# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/nd_tasklet.o
+# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/thread_tasklet.o
+
+OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGE_KW41Z/wireless/rf_phy/source/ASP.o
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/MPM.o
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyISR.o
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/PhyPacketProcessor.o
@@ -114,7 +124,7 @@ INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/sal-stack-nanostack/nanostack/
 INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/targets
 INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/coap-service/coap-service
 INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/coap-service/source/include
-
+INCLUDE_PATHS += -I../features\FEATURE_COMMON_PAL\nanostack-libservice\mbed-client-libservice
 
 LIBRARY_PATHS := -L../TARGET_KW41Z/TOOLCHAIN_GCC_ARM  -L../nanostack/FEATURE_NANOSTACK_FULL/TOOLCHAIN_ARM/TARGET_LIKE_CORTEX_M0
 LIBRARIES := -l:libmbed-os.a  -l:libnanostack_armcc_Cortex-M0_nanostack_full.ar

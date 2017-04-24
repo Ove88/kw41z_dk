@@ -17,6 +17,8 @@
 #define MBED_H
 
 #include "mbed_config.h"
+// For clang auto complete (Couldn't solve it another way)
+#include "clang_headers.h"
 
 #define MBED_LIBRARY_VERSION 123
 
