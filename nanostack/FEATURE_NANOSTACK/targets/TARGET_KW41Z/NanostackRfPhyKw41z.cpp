@@ -74,9 +74,10 @@ static void rf_unlock(void);
 
 /* Phy layer interface prototypes */
 static int8_t rf_phy_transmitter_busy();
+
 static int8_t rf_phy_cca_tx_request(uint8_t *data, uint8_t dataLength);
 static int8_t rf_phy_management_request(radio_request_t request);
-static int8_t rf_phy_set_channel(int8_t channel);
+static int8_t rf_phy_check_and_set_channel(int8_t newChannel);
 static phy_link_tx_status_e rf_phy_tx_process_result(phyStatus_t phyResult);
 
 /*============ ARM_NWK_HAL functions ============*/
@@ -181,7 +182,7 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
             if (ret_val == 0) 
             {
                 radio_state = STATE_RX;
-                rf_phy_set_channel(rf_channel);
+                rf_phy_check_and_set_channel(rf_channel);
             }
             
             break;
@@ -227,7 +228,7 @@ static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_pt
         /* Set channel, used for setting channel for energy scan */
         case PHY_EXTENSION_SET_CHANNEL:
 
-            rf_phy_set_channel(*data_ptr);
+            rf_phy_check_and_set_channel(*data_ptr);
             break;
 
         /* Read energy on the channel */
@@ -544,11 +545,36 @@ phy_link_tx_status_e rf_phy_tx_process_result(phyStatus_t phyResult)
  *
  * \param none
  *
- * \return none
+ * \return 0 Success
+ * \return -1 Failure
  */
-static int8_t rf_phy_set_channel(int8_t channel)
+static int8_t rf_phy_check_and_set_channel(int8_t newChannel)
 {
 
+    int8_t ret_val = 0;
+    
+    if (current_channel != newChannel)
+    {
+            
+        if(newChannel > 0 && newChannel < 11) {
+            if(MBED_CONF_SL_RAIL_BAND == 915) {
+                current_channel = newChannel;
+                return true;
+            } else {
+                return false;
+            }
+        } else if(newChannel >= 11 && newChannel <= 26) {
+            if(MBED_CONF_SL_RAIL_BAND == 2400) {
+                current_channel = newChannel;
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+    return ret_val;
 }
 
 /*
