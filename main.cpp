@@ -10,7 +10,8 @@ void threadConnect();
 
 int main() 
 {
-   threadConnect();
+    
+    threadConnect();
 
     while(true)
     {

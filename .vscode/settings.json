@@ -1,3 +1,9 @@
 // Place your settings in this file to overwrite default and user settings.
 {
+    "[cpp]": {
+        "editor.quickSuggestions": false
+    },
+    "[c]": {
+        "editor.quickSuggestions": false
+    }
 }

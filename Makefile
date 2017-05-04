@@ -48,14 +48,14 @@ PROJECT := kw41z_dk
 
 OBJECTS += main.o
 
-# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/CallbackHandler.o
-# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/NanostackEthernetInterface.o
-# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/LoWPANNDInterface.o
-# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/ThreadInterface.o
-# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/MeshInterfaceNanostack.o
-# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/mesh_system.o
-# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/nd_tasklet.o
-# OBJECTS += nanostack/FEATURE_NANOSTACK/mbed-mesh-api/source/thread_tasklet.o
+# OBJECTS += nanostack/mbed-mesh-api/source/CallbackHandler.o
+# OBJECTS += nanostack/mbed-mesh-api/source/NanostackEthernetInterface.o
+# OBJECTS += nanostack/mbed-mesh-api/source/LoWPANNDInterface.o
+# OBJECTS += nanostack/mbed-mesh-api/source/ThreadInterface.o
+# OBJECTS += nanostack/mbed-mesh-api/source/MeshInterfaceNanostack.o
+# OBJECTS += nanostack/mbed-mesh-api/source/mesh_system.o
+# OBJECTS += nanostack/mbed-mesh-api/source/nd_tasklet.o
+# OBJECTS += nanostack/mbed-mesh-api/source/thread_tasklet.o
 
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGE_KW41Z/wireless/rf_phy/source/ASP.o
 OBJECTS += TARGET_KW41Z/TARGET_Freescale/TARGET_MCUXpresso_MCUS/TARGET_KW41Z/wireless/rf_phy/source/MPM.o
@@ -116,18 +116,18 @@ INCLUDE_PATHS += -I../rtx/TARGET_CORTEX_M
 INCLUDE_PATHS += -I../netsocket
 INCLUDE_PATHS += -I../events
 INCLUDE_PATHS += -I../events/equeue
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/nanostack-interface
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/mbed-mesh-api/mbed-mesh-api
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/mbed-mesh-api/mbed-mesh-api/source/include
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/sal-stack-nanostack/nanostack
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/sal-stack-nanostack/nanostack/platform
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/targets
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/coap-service/coap-service
-INCLUDE_PATHS += -I../nanostack/FEATURE_NANOSTACK/coap-service/source/include
-INCLUDE_PATHS += -I../features\FEATURE_COMMON_PAL\nanostack-libservice\mbed-client-libservice
+INCLUDE_PATHS += -I../nanostack/nanostack-interface
+INCLUDE_PATHS += -I../nanostack/mbed-mesh-api/mbed-mesh-api
+INCLUDE_PATHS += -I../nanostack/mbed-mesh-api/mbed-mesh-api/source/include
+INCLUDE_PATHS += -I../nanostack/sal-stack-nanostack/nanostack
+INCLUDE_PATHS += -I../nanostack/sal-stack-nanostack/nanostack/platform
+INCLUDE_PATHS += -I../nanostack/TARGET_KW41Z
+INCLUDE_PATHS += -I../nanostack/coap-service/coap-service
+INCLUDE_PATHS += -I../nanostack/coap-service/source/include
+INCLUDE_PATHS += -I../features/FEATURE_COMMON_PAL\nanostack-libservice\mbed-client-libservice
 
-LIBRARY_PATHS := -L../TARGET_KW41Z/TOOLCHAIN_GCC_ARM  -L../nanostack/FEATURE_NANOSTACK_FULL/TOOLCHAIN_ARM/TARGET_LIKE_CORTEX_M0
-LIBRARIES := -l:libmbed-os.a  -l:libnanostack_armcc_Cortex-M0_nanostack_full.ar
+LIBRARY_PATHS := -L../TARGET_KW41Z/TOOLCHAIN_GCC_ARM 
+LIBRARIES := -l:libmbed-os.a  -l:libnanostack_arm-none-eabi-gcc_Cortex-M0_nanostack_full.ar
 LINKER_SCRIPT ?= ../TARGET_KW41Z/TOOLCHAIN_GCC_ARM/MKW41Z512xxx4.ld
 
 # Objects and Paths

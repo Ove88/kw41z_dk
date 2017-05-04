@@ -3,7 +3,7 @@
 */
 
 
-#include "clang_headers.h" // For completion
+//#include "clang_headers.h" // For completion
 
 #include "ns_types.h"
 #include "arm_hal_interrupt.h"
@@ -19,11 +19,12 @@
 /* RF driver data */
 static int8_t rf_radio_driver_id = -1;
 static uint8_t mac_address[8];
+static uint16_t mac_short_address;
 
 static phy_device_driver_s device_driver;
 
 /* Driver instance handle */
-static NanostackRfPhyEfr32 *rf = NULL;
+static NanostackRfPhyKw41z *rf = NULL;
 
 const phy_rf_channel_configuration_s phy_2_4ghz = {2405000000, 5000000, 250000, 16, M_OQPSK};
 const phy_rf_channel_configuration_s phy_subghz = {868300000, 2000000, 250000, 11, M_OQPSK};
@@ -617,6 +618,7 @@ static int8_t rf_phy_cca_tx_request(uint8_t *data, uint8_t dataLength)
 
     /* Request to transfer message */
     MAC_PD_SapHandler(&msg, rf_phy_instance_id);
+    
 }
 
 /*
