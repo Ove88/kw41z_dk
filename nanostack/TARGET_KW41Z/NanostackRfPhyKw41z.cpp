@@ -3,7 +3,7 @@
 */
 
 
-//#include "clang_headers.h" // For completion
+#include "clang_headers.h" // For completion
 
 #include "ns_types.h"
 #include "arm_hal_interrupt.h"
@@ -44,10 +44,9 @@ typedef enum {
 } radio_state_t;
 
 typedef enum {
-    REQUEST_IDLE_STATE,
-    REQUEST_RX_STATE,
-    REQUEST_ED_MESAUREMENT
-} radio_request_t;
+    plmeEdCnf_t recvCnf;
+    bool        newCnf;
+}edConf_t;
 
 static uint8_t ack_requested;
 static uint8_t current_tx_handle;
@@ -56,14 +55,16 @@ static int8_t current_channel = -1;
 static bool data_pending = false, last_ack_pending_bit = false;
 
 static radio_state_t radio_state = RADIO_UNINIT;
-static const instanceId_t rf_mac_instance_id = 0, rf_phy_instance_id = 1;
-
+static const instanceId_t mac_instance_id = 0, phy_instance_id = 1;
+static edConf_t lastEdCnf;
 
 /* ARM_NWK_HAL prototypes */
+
 static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_ptr);
 static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_t rf_channel);
 static int8_t rf_address_write(phy_address_type_e address_type, uint8_t *address_ptr);
 static int8_t rf_start_cca(uint8_t *data_ptr, uint16_t data_length, uint8_t tx_handle, data_protocol_e data_protocol );
+
 
 /* Local prototypes */
 
@@ -71,18 +72,23 @@ static int8_t rf_device_register(void);
 static void rf_device_unregister(void);
 static void rf_lock(void);
 static void rf_unlock(void);
+static int8_t rf_check_and_set_channel(int8_t newChannel);
 
 
 /* Phy layer interface prototypes */
-static int8_t rf_phy_transmitter_busy();
 
-static int8_t rf_phy_cca_tx_request(uint8_t *data, uint8_t dataLength);
-static int8_t rf_phy_management_request(radio_request_t request);
-static int8_t rf_phy_check_and_set_channel(int8_t newChannel);
-static phy_link_tx_status_e rf_phy_tx_process_result(phyStatus_t phyResult);
+static phy_link_tx_status_e phy_tx_process_result(phyStatus_t phyResult);
+static int8_t   phy_cca_tx_request(uint8_t *data, uint8_t dataLength);
+static int8_t   phy_trx_state_request(phyState_t state);
+static int8_t   phy_request_rx_state();
+static int8_t   phy_request_idle_state();
+static void     phy_force_idle_state();
+static int8_t   phy_measure_channel_energy(uint8_t *energyToSet);
+static int8_t   phy_pib_request(plmeSetReq_t *setRequest, plmeGetReq_t *getRequest);
+static uint64_t phy_get_pib_attribute(phyPibId_t attribute);
+static int8_t   phy_set_pib_attribute(phyPibId_t attribute, uint64_t value);
 
 /*============ ARM_NWK_HAL functions ============*/
-
 
 /*
  * \brief Function starts the CCA process before starting data transmission and copies the data to RF TX FIFO.
@@ -96,25 +102,23 @@ static phy_link_tx_status_e rf_phy_tx_process_result(phyStatus_t phyResult);
 int8_t rf_start_cca(uint8_t *data_ptr, uint16_t data_length, uint8_t tx_handle, data_protocol_e data_protocol)
 {
   
-    /*Check if transmitter is busy*/
-    if (rf_phy_transmitter_busy)
+    /* Check if transmitter is busy */
+    if (radio_state != STATE_IDLE)
     {
-        /*Return busy*/
+        /* Return busy */
         return -1;
     }
     else
     {
-        /*Check if transmitted data needs to be ACKed*/
-        if(*data_ptr & 0x20)
+        /* Check if transmitted data needs to be ACKed */
+        if (*data_ptr & 0x20)
            ack_requested = 1;
         else
            ack_requested = 0;
         
-        /* Store the sequence number for ACK handling */
-        current_tx_sequence = *(data_ptr + 2);
 
         /* Start CCA and TX process */
-        rf_phy_cca_tx_request(data_ptr, data_length);
+        phy_cca_tx_request(data_ptr, data_length);
         
         /* Update current radio state */
         radio_state = STATE_TX;
@@ -153,22 +157,26 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
     {
         /* Reset PHY driver and set to idle */
         case PHY_INTERFACE_RESET:
-
-            /* Reset PHY interface */
-            PhyPlmeSetPwrState(gPhyPwrIdle_c); 
+           
+            phy_force_idle_state();
             
-            /* Request idle state */
-            ret_val = rf_phy_management_request(REQUEST_IDLE_STATE);
+            radio_state = STATE_IDLE;
             
-            if (ret_val == 0) radio_state = STATE_IDLE;
             break;
 
         /* Disable PHY Interface driver */
         case PHY_INTERFACE_DOWN:
             
-            /* Set radio in low power mode */
-            PhyPlmeSetPwrState(gPhyPwrDSM_c);
-            radio_state = STATE_SLEEP;
+             /* Request idle state */
+            ret_val = phy_request_idle_state();
+           
+            if (ret_val == 0)
+            {
+                /* Set radio in low power mode */
+                PhyPlmeSetPwrState(gPhyPwrDSM_c);
+                radio_state = STATE_SLEEP;
+            } 
+           
             break;
 
         /* Enable PHY Interface driver */
@@ -178,12 +186,12 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
             PhyPlmeSetPwrState(gPhyPwrIdle_c); 
            
             /* Request radio RX state */
-            ret_val = rf_phy_management_request(REQUEST_RX_STATE); 
+            ret_val = phy_management_request(REQUEST_RX_STATE); 
             
             if (ret_val == 0) 
             {
                 radio_state = STATE_RX;
-                rf_phy_check_and_set_channel(rf_channel);
+                rf_check_and_set_channel(rf_channel);
             }
             
             break;
@@ -212,6 +220,8 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
  */
 static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_ptr)
 {
+    int8_t ret_val = 0;
+
     switch (extension_type)
     {
         /* Control MAC pending bit for Indirect data transmission */
@@ -229,22 +239,22 @@ static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_pt
         /* Set channel, used for setting channel for energy scan */
         case PHY_EXTENSION_SET_CHANNEL:
 
-            rf_phy_check_and_set_channel(*data_ptr);
+            rf_check_and_set_channel(*data_ptr);
             break;
 
         /* Read energy on the channel */
         case PHY_EXTENSION_READ_CHANNEL_ENERGY:
            
-            *data_ptr = rf_get_channel_energy();
+             ret_val = phy_measure_channel_energy(data_ptr);
             break;
 
         /* Read status of the link */
         case PHY_EXTENSION_READ_LINK_STATUS:
          
-           *data_ptr = rf_get_link_status();
+           //*data_ptr = rf_get_link_status();
             break;
     }
-    return 0;
+    return ret_val;
 }
 
 /*
@@ -297,7 +307,7 @@ static int8_t rf_device_register(void)
 {
     /* Do some initialization */
     Phy_Init();
-    BindToPHY(rf_mac_instance_id);
+    BindToPHY(mac_instance_id);
     /* Get real MAC address */
     /* MAC is stored MSB first */
     memcpy(mac_address, (const void*)RSIM->MAC_MSB, 4);
@@ -463,40 +473,263 @@ void NanostackRfPhyKw41z::set_mac_address(uint8_t *mac)
     rf_if_unlock();
 }
 
-//====================== Interface functions and callbacks =========================
+//====================== Phy layer interface functions and callbacks =========================
+
 
 
 /*
- * \brief Get the current transmitter status
+ * \brief 
  *
  * \param none
  *
- * \return current transmitter status
+ * \return 0 Success
+ * \return -1 Failure
  */
-static int8_t rf_phy_transmitter_busy()
+static int8_t rf_check_and_set_channel(int8_t newChannel)
 {
-    int8_t retVal = 1;
 
-    switch(radio_state) {
-    case RADIO_UNINIT:
-        tr_debug("Radio uninit\n");
-        break;
-    case RADIO_INITING:
-        tr_debug("Radio initing\n");
-        break;
-    case STATE_CALIBRATION:
-        tr_debug("Radio calibrating\n");
-        break;
-    case STATE_TX:
-        tr_debug("Radio in TX mode\n");
-        break;
-    case STATE_IDLE:
-    case STATE_RX:
-        retval = 0;
-        break;
+    int8_t ret_val = 0;
+    
+    if (current_channel != newChannel)
+    {  
+        if(newChannel >= 11 && newChannel <= 26) {
 
-    return retVal;
+            current_channel = newChannel;
+            
+            /* Update PHY with new channel */     
+            phy_set_pib_attribute(gPhyPibCurrentChannel_c, newChannel);
+        } 
+        else 
+        {
+            ret_val = -1;
+        }
     }
+
+    return ret_val;
+}
+
+/*
+ * \brief 
+ *
+ * \param none
+ *
+ * \return 0 Success
+ * \return -1 Failure
+ */
+static int8_t phy_set_pib_attribute(phyPibId_t attribute, uint64_t value)
+{
+    plmeGetReq_t request;
+
+    request.PibAttribute = attribute;
+    request.pPibAttributeValue = value;
+
+    return phy_pib_request(request, NULL);
+}
+
+/*
+ * \brief 
+ *
+ * \param none
+ *
+ * \return 0 Success
+ * \return -1 Failure
+ */
+static uint64_t phy_get_pib_attribute(phyPibId_t attribute)
+{
+    plmeGetReq_t req;
+    uint64_t value;
+    int8_t ret_val;
+
+    req.PibAttribute = attribute;
+    req.pPibAttributeValue = &value;
+    
+    ret_val = phy_pib_request(NULL, req);
+
+    return ret_val == 0 ? value : -1;
+}
+
+/*
+ * \brief 
+ *
+ * \param none
+ *
+ * \return 0 Success
+ * \return -1 Failure
+ */
+static int8_t phy_pib_request(plmeSetReq_t *setRequest, plmeGetReq_t *getRequest)
+{
+    macToPlmeMessage_t msg;
+    phyStatus_t result = gPhySuccess_c;
+
+    msg.macInstance = mac_instance_id;
+
+    if (setRequest != NULL)
+    {
+        msg.msgType = gPlmeSetReq_c;
+        msg.msgData.setReq = *setRequest;
+    }
+
+    else if (getRequest != NULL)
+    {
+        msg.msgType = gPlmeGetReq_c;
+        msg.msgData.getReq = *getRequest;
+    }
+
+    else
+    {
+        result = gPhyInvalidParameter_c;
+    }
+
+    if (result == gPhySuccess_c)
+    {
+         result = MAC_PLME_SapHandler(&msg, phy_instance_id);
+    }
+
+    return result == gPhySuccess_c ? 0 : -1;
+}
+
+/*
+ * \brief Register PHY callback functions
+ *
+ * \param none
+ *
+ * \return none
+ */
+static void phy_register_callbacks()
+{
+    Phy_RegisterSapHandlers(
+        phy_data_msg_sap_handler, 
+        phy_management_message_sap_handler, 
+        phy_instance_id
+    );
+}
+
+/*
+ * \brief Invoke PHY layer with a CCA and following TX request
+ *
+ * \param none
+ *
+ * \return none
+ */
+static int8_t phy_cca_tx_request(uint8_t *data, uint8_t dataLength)
+{
+    macToPdDataMessage_t msg;
+
+    msg.macInstance = mac_instance_id;
+    msg.msgType = gPdDataReq_c; /* Define data request message type */
+
+    msg.msgData.dataReq.startTime = gPhySeqStartAsap_c;
+    msg.msgData.dataReq.txDuration = 0; // ?? The computed duration for the Data Request frame
+    msg.msgData.dataReq.slottedTx = gPhyUnslottedTx_c; /* One CCA operation is performed */
+    msg.msgData.dataReq.CCABeforeTx = gPhyCCAMode1_c; /* One CCA operation is performed */
+    msg.msgData.dataReq.ackRequired = (*data & 0x20) ? gPhyRxAckRqd_c : gPhyNoAckRqd_c;
+    msg.msgData.dataReq.psduLength = dataLength;
+    msg.msgData.dataReq.pPsdu = data;
+
+    /* Request to transfer message */
+    MAC_PD_SapHandler(&msg, phy_instance_id);
+    
+    return 0;
+}
+
+
+/*
+ * \brief Invoke PHY layer rx request.
+ *
+ * \param none
+ *
+ * \return none
+ */
+static int8_t phy_request_rx_state()
+{
+    return phy_trx_state_request(gPhy_setRxOn_c);
+}
+
+/*
+ * \brief Invoke PHY layer idle request.
+ *
+ * \param none
+ *
+ * \return none
+ */
+static int8_t phy_request_idle_state()
+{
+    return phy_trx_state_request(gPhy_setRxOff_c);
+}
+
+/*
+ * \brief Invoke PHY layer force idle request.
+ *
+ * \param none
+ *
+ * \return none
+ */
+static int8_t phy_force_idle_state()
+{
+    return phy_trx_state_request(gPhyForceTRxOff_c);
+}
+
+/*
+ * \brief Invoke PHY layer trx state request.
+ *
+ * \param none
+ *
+ * \return none
+ */
+static int8_t phy_trx_state_request(phyState_t state)
+{
+    macToPlmeMessage_t msg;
+    phyStatus_t result;
+
+    msg.macInstance = mac_instance_id;
+    msg.msgType = gPlmeSetTRxStateReq_c;
+
+    msg.msgData.setTRxStateReq.state = state;
+    msg.msgData.setTRxStateReq.slottedMode = gPhyUnslottedTx_c;
+    msg.msgData.setTRxStateReq.startTime = gPhySeqStartAsap_c;
+    msg.msgData.setTRxStateReq.rxDuration = 0; /* ?? If the requested state is Rx, then Rx will be enabled for rxDuration symbols.*/
+
+    result = MAC_PLME_SapHandler(&msg, phy_instance_id);
+
+    return result == gPhySuccess ? 0 : -1;
+}
+
+/*
+ * \brief 
+ *
+ * \param Invoke PHY layer ED measurement request.
+ *
+ * \return 0  : Success
+ * \return -1 : Failure
+ */
+static int8_t phy_measure_channel_energy(uint8_t *energyToSet)
+{
+    macToPlmeMessage_t msg;
+    phyStatus_t result;
+    uint8_t energy;
+    int8_t ret_val;
+
+    msg.macInstance = mac_instance_id;
+    msg.msgType = gPlmeEdReq_c;
+
+    msg.msgData.edReq.startTime = gPhySeqStartAsap_c;
+
+    result = MAC_PLME_SapHandler(&msg, phy_instance_id);
+
+    if (result == gPhySuccess_c)
+    {
+        /* Wait for signal from SAP Handler */
+        while(!lastEdCnf.newCnf);
+
+        /* Reset signal */
+        lastEdCnf.newCnf = false;
+
+        /* Get energy level and result of energy measurement */
+        *energyToSet = lastEdCnf.recvCnf.energyLevel;
+        result = lastEdCnf.recvCnf.status;
+    }
+
+    return result == gPhySuccess_c ? 0 : -1;
 }
 
 /*
@@ -506,7 +739,7 @@ static int8_t rf_phy_transmitter_busy()
  *
  * \return none
  */
-phy_link_tx_status_e rf_phy_tx_process_result(phyStatus_t phyResult)
+phy_link_tx_status_e phy_tx_process_result(phyStatus_t phyResult)
 {
     phy_link_tx_status_e txStatus;
 
@@ -533,114 +766,23 @@ phy_link_tx_status_e rf_phy_tx_process_result(phyStatus_t phyResult)
             break;
 
         case gPhyNoAck_c:
-            txStatus = PHY_LINK_TX_DONE_PENDING;
+            txStatus = PHY_LINK_TX_FAIL;
             break;
 
         default:
+            txStatus = PHY_LINK_TX_FAIL;
             break;
     }
 }
 
-/*
- * \brief 
- *
- * \param none
- *
- * \return 0 Success
- * \return -1 Failure
- */
-static int8_t rf_phy_check_and_set_channel(int8_t newChannel)
-{
-
-    int8_t ret_val = 0;
-    
-    if (current_channel != newChannel)
-    {
-            
-        if(newChannel > 0 && newChannel < 11) {
-            if(MBED_CONF_SL_RAIL_BAND == 915) {
-                current_channel = newChannel;
-                return true;
-            } else {
-                return false;
-            }
-        } else if(newChannel >= 11 && newChannel <= 26) {
-            if(MBED_CONF_SL_RAIL_BAND == 2400) {
-                current_channel = newChannel;
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            return false;
-        }
-    }
-    return ret_val;
-}
-
-/*
- * \brief Register PHY callback functions
- *
- * \param none
- *
- * \return none
- */
-static void rf_phy_register_callbacks()
-{
-    Phy_RegisterSapHandlers(
-        rf_phy_data_msg_sap_handler, 
-        rf_management_message_sap_handler, 
-        rf_phy_instance_id
-    );
-}
-
-/*
- * \brief Call on PHY layer with a TX request
- *
- * \param none
- *
- * \return none
- */
-static int8_t rf_phy_cca_tx_request(uint8_t *data, uint8_t dataLength)
-{
-    macToPdDataMessage_t msg;
-
-    msg.macInstance = rf_mac_instance_id;
-    msg.msgType = gPdDataReq_c; /* Define data request message type */
-
-    msg.msgData.dataReq.startTime = gPhySeqStartAsap_c;
-    msg.msgData.dataReq.txDuration = 0; // ???
-    msg.msgData.dataReq.slottedTx = gPhyUnslottedTx_c; /* One CCA operation is performed */
-    msg.msgData.dataReq.CCABeforeTx = gPhyCCAMode1_c; /* One CCA operation is performed */
-    msg.msgData.dataReq.ackRequired = (*data & 0x20) ? gPhyRxAckRqd_c : gPhyNoAckRqd_c;
-    msg.msgData.dataReq.psduLength = dataLength;
-    msg.msgData.dataReq.pPsdu = data;
-
-    /* Request to transfer message */
-    MAC_PD_SapHandler(&msg, rf_phy_instance_id);
-    
-}
-
-/*
- * \brief Call on PHY layer with a management request.
- *
- * \param none
- *
- * \return none
- */
-static int8_t rf_phy_management_request(radio_request_t request)
-{
-    MAC_PLME_SapHandler();
-}
-
-/*
+/* TODO: Does PHY identify ack request or does auto ack need to be disabled?
  * \brief PHY layer data message SAP handler 
  *
  * \param none
  *
  * \return none
  */
-phyStatus_t rf_phy_data_msg_sap_handler(
+phyStatus_t phy_data_msg_sap_handler( 
     pdDataToMacMessage_t *pMsg, 
     instanceId_t instanceId)
 { 
@@ -654,7 +796,7 @@ phyStatus_t rf_phy_data_msg_sap_handler(
             pMsg->msgData.dataInd.psduLength,           /* Number of bytes received */
             pMsg->msgData.dataInd.ppduLinkQuality,      /* Received LQI (link quality) */
             PhyConvertLQIToRSSI(
-                pMsg->msgData.dataInd.ppduLinkQuality), /* Power ratio in dB */
+                pMsg->msgData.dataInd.ppduLinkQuality), /* RSSI in dB */
             rf_radio_driver_id                     
         );
     }
@@ -666,11 +808,13 @@ phyStatus_t rf_phy_data_msg_sap_handler(
         device_driver.phy_tx_done_cb(                              
             rf_radio_driver_id,                                     
             current_tx_handle,                                         
-            rf_phy_tx_process_result(pMsg->msgData.dataCnf.status), /* TX confirm message */
+            phy_tx_process_result(pMsg->msgData.dataCnf.status), /* TX confirm message */
             1,                                                      /* CCA retries */
             1                                                       /* TX retries */
         );
     }
+
+    return gPhySuccess_c;
 }
 
 /*
@@ -680,11 +824,24 @@ phyStatus_t rf_phy_data_msg_sap_handler(
  *
  * \return none
  */
-phyStatus_t rf_management_message_sap_handler(
+phyStatus_t phy_management_message_sap_handler(
     plmeToMacMessage_t *pMsg, 
     instanceId_t instanceId)
 {
-    pMsg->msgData.
-    phyStatus_t g;
+
+    switch(pMsg->msgType)
+    {
+        case gPlmeCcaCnf_c:
+        // Not implemented
+        break;
+
+        /* Channel energy measurement confirmation message */
+        case gPlmeEdCnf_c:
+        
+        lastEdCnf.recvCnf = *confMsg;   /* Update local last received energy measurement */
+        lastEdCnf.newCnf = true;        /* Signal that new measurement is available */
+        break;
+    }
     
+    return gPhySuccess_c;
 }
