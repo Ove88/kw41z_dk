@@ -1,6 +1,6 @@
 # NXP KW41Z Thread Project
 
-This is a project executed for testing the recent Thread wireless IoT standard using the NXP FRDM-KW41Z platform with ARM mbed OS. The project is currently under development; first and most importantly, a interface between the ARM mbed Thread stack's MAC layer and the NXP PHY layer is being developed.
+This is a project executed for testing the recent Thread wireless IoT standard using the NXP FRDM-KW41Z platform with ARM mbed OS. The project is currently under development; first and most importantly, an interface between the ARM mbed Thread stack's MAC layer and the NXP PHY layer is being developed.
 
 Some useful links:
 * [Thread Group](http://threadgroup.org/)
