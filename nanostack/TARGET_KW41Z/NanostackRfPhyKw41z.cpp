@@ -19,7 +19,7 @@
 /* RF driver data */
 static int8_t rf_radio_driver_id = -1;
 static uint8_t mac_address[8];
-static uint16_t mac_short_address;
+static uint16_t shortMac_address;
 
 static phy_device_driver_s device_driver;
 
@@ -50,11 +50,9 @@ typedef enum {
 
 static uint8_t ack_requested;
 static uint8_t current_tx_handle;
-static uint8_t current_tx_sequence;
 static int8_t current_channel = -1;
-static bool data_pending = false, last_ack_pending_bit = false;
 
-static radio_state_t radio_state = RADIO_UNINIT;
+static radio_state_t radio_state = RADIO_IDLE;
 static const instanceId_t mac_instance_id = 0, phy_instance_id = 1;
 static edConf_t lastEdCnf;
 
@@ -72,7 +70,6 @@ static int8_t rf_device_register(void);
 static void rf_device_unregister(void);
 static void rf_lock(void);
 static void rf_unlock(void);
-static int8_t rf_check_and_set_channel(int8_t newChannel);
 
 
 /* Phy layer interface prototypes */
@@ -87,6 +84,11 @@ static int8_t   phy_measure_channel_energy(uint8_t *energyToSet);
 static int8_t   phy_pib_request(plmeSetReq_t *setRequest, plmeGetReq_t *getRequest);
 static uint64_t phy_get_pib_attribute(phyPibId_t attribute);
 static int8_t   phy_set_pib_attribute(phyPibId_t attribute, uint64_t value);
+static int8_t   phy_set_mac_address_match(uint8_t *address);
+static int8_t   phy_set_short_mac_address_match(uint8_t *address);
+static int8_t   phy_set_pan_id_address_match(uint8_t *address);
+static int8_t   phy_check_and_set_channel(int8_t newChannel);
+static int8_t   phy_check_last_ack_frame_pending();
 
 /*============ ARM_NWK_HAL functions ============*/
 
@@ -151,7 +153,7 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
       by either an R or RxAck)    
     */
 
-    int8_t ret_val = 0;
+    int8_t retVal = 0;
 
     switch (new_state)
     {
@@ -168,9 +170,9 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
         case PHY_INTERFACE_DOWN:
             
              /* Request idle state */
-            ret_val = phy_request_idle_state();
+            retVal = phy_request_idle_state();
            
-            if (ret_val == 0)
+            if (retVal == 0)
             {
                 /* Set radio in low power mode */
                 PhyPlmeSetPwrState(gPhyPwrDSM_c);
@@ -186,12 +188,12 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
             PhyPlmeSetPwrState(gPhyPwrIdle_c); 
            
             /* Request radio RX state */
-            ret_val = phy_management_request(REQUEST_RX_STATE); 
+            retVal = phy_management_request(REQUEST_RX_STATE); 
             
-            if (ret_val == 0) 
+            if (retVal == 0) 
             {
                 radio_state = STATE_RX;
-                rf_check_and_set_channel(rf_channel);
+                phy_check_and_set_channel(rf_channel);
             }
             
             break;
@@ -205,7 +207,7 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
             break;
     }
 
-    return ret_val;
+    return retVal;
 }
 
 
@@ -220,32 +222,33 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
  */
 static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_ptr)
 {
-    int8_t ret_val = 0;
+    int8_t retVal = 0;
 
     switch (extension_type)
     {
         /* Control MAC pending bit for Indirect data transmission */
-        case PHY_EXTENSION_CTRL_PENDING_BIT:
+        case PHY_EXTENSION_CTRL_PENDING_BIT:    //TODO: Data last ack pending..
 
         if (*data_ptr) data_pending = true;
         else data_pending = false;
         break;
 
         /* Return frame pending status */
-        case PHY_EXTENSION_READ_LAST_ACK_PENDING_STATUS:
-            *data_ptr = rf_if_last_acked_pending();
+        case PHY_EXTENSION_READ_LAST_ACK_PENDING_STATUS: //TODO:
+
+            *data_ptr = phy_get_pib_attribute(gPhyPibLastTxAckFP_c);
             break;
 
         /* Set channel, used for setting channel for energy scan */
         case PHY_EXTENSION_SET_CHANNEL:
 
-            rf_check_and_set_channel(*data_ptr);
+            phy_check_and_set_channel(*data_ptr);
             break;
 
         /* Read energy on the channel */
         case PHY_EXTENSION_READ_CHANNEL_ENERGY:
            
-             ret_val = phy_measure_channel_energy(data_ptr);
+             retVal = phy_measure_channel_energy(data_ptr);
             break;
 
         /* Read status of the link */
@@ -254,7 +257,7 @@ static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_pt
            //*data_ptr = rf_get_link_status();
             break;
     }
-    return ret_val;
+    return retVal;
 }
 
 /*
@@ -269,27 +272,37 @@ static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_pt
 static int8_t rf_address_write(phy_address_type_e address_type, uint8_t *address_ptr)
 {
 
+    int8_t retVal = 0;
+    phyPibId_t 
     switch (address_type)
     {
         /*Set 48-bit address*/
         case PHY_MAC_48BIT:
+            
             /* Not used in this example */
+            retVal = -1;
             break;
+
         /*Set 64-bit address*/
         case PHY_MAC_64BIT:
-            rf_set_mac_address(address_ptr);
+        
+            retVal = phy_set_mac_address_match(address_ptr);
             break;
+
         /*Set 16-bit address*/
         case PHY_MAC_16BIT:
-            rf_set_short_adr(address_ptr);
+
+            retVal = phy_set_short_mac_address_match(address_ptr);
             break;
+
         /*Set PAN Id*/
         case PHY_MAC_PANID:
-            rf_set_pan_id(address_ptr);
+
+             retVal = phy_set_pan_id_address_match(address_ptr);
             break;
     }
 
-    return 0;
+    return retVal;
 }
 
 /*****************************************************************************/
@@ -360,33 +373,6 @@ static void rf_device_unregister(void)
 {
     arm_net_phy_unregister(rf_radio_driver_id);
 }
-
-void rf_handle_rx_end(void)
-{
-    uint8_t rf_lqi;
-    int8_t rf_rssi;
-    uint16_t rf_buffer_len;
-    uint8_t *rf_buffer;
-
-    /* Get received data */
-    rf_buffer_len = rf_get_rf_buffer(rf_buffer);
-    if(!rf_buffer_len)
-        return;
-
-    /* If waiting for ACK, check here if the packet is an ACK to a message previously sent */
-
-    /* Get link information */
-    rf_rssi = rf_get_rssi();
-    rf_lqi = rf_get_lqi();
-
-    /* Note: Checksum of the packet must be checked and removed before entering here */
-
-    /* Send received data and link information to the network stack */
-    if( device_driver.phy_rx_cb ){
-        device_driver.phy_rx_cb(rf_buffer, rf_buffer_len, rf_lqi, rf_rssi, rf_radio_driver_id);
-    }
-}
-
 
 static void rf_lock(void)
 {
@@ -476,6 +462,120 @@ void NanostackRfPhyKw41z::set_mac_address(uint8_t *mac)
 //====================== Phy layer interface functions and callbacks =========================
 
 
+/**
+ * @struct PHY_Config_t
+ * @brief Configuration structure for IEEE 802.15.4 PHY layer
+ */
+typedef struct PHY_Config {
+  /**
+   * Enable promiscuous mode during configuration. This can be overridden via
+   * RAIL_IEEE802154_SetPromiscuousMode() afterwards.
+   */
+  bool promiscuousMode;
+  /**
+   * Set whether the device is a PAN Coordinator during configuration. This can
+   * be overridden via RAIL_IEEE802154_SetPanCoordinator() afterwards.
+   */
+  bool isPanCoordinator;
+  /**
+   * Set which 802.15.4 frame types will be received, of Beacon, Data, Ack, and
+   * Command. This setting can be overridden via RAIL_IEEE802154_AcceptFrames().
+   */
+  uint8_t framesMask;
+  /**
+   * Defines the default radio state after a transmit operation (transmit
+   * packet, wait for ack) or a receive operation (receive packet, transmit
+   * ack) finishes.
+   */
+  RAIL_RadioState_t defaultState;
+  /**
+   * Define the idleToRx and idleToTx time
+   * This defines the time it takes for the radio to go into RX or TX from an
+   * idle radio state
+   */
+  uint16_t idleTime;
+  /**
+   * Define the turnaround time after receiving a packet and transmitting an
+   * ack and vice versa
+   */
+  uint16_t turnaroundTime;
+  /**
+   * Define the ack timeout time in microseconds
+   */
+  uint16_t ackTimeout;
+} PHY_Config_t;
+
+
+/*
+ * \brief Init the PHY layer with the given parameters
+ *
+ * \param PHY_Config_t structure with the parameters to set
+ *
+ * \return 0 Success
+ * \return -1 Failure
+ */
+ static int8_t phy_init(PHY_Config_t *param)
+ {
+     phy_set_pib_attribute(gPhyPibPanCoordinator_c, param->isPanCoordinator);
+     phy_set_pib_attribute(gPhyPibSrcAddrEnable_c,);
+     phy_set_pib_attribute(gPhyPibPromiscuousMode_c);
+     phy_set_pib_attribute(gPhyPibFrameEnable_c);
+     phy_set_pib_attribute(gPhyPibFrameVersion_c );
+     phy_set_pib_attribute(gPhyPibRxOnWhenIdle );
+     phy_set_pib_attribute(gPhyPibFrameWaitTime_c  );
+     phy_set_pib_attribute(gPhyPibRxOnWhenIdle );
+     phy_set_pib_attribute(gPhyPibAutoAckEnable_c );
+ }
+
+/*
+ * \brief Set MAC long address to be used by the PHY's source address matching feature.
+ *
+ * \param Pointer to address w/ MSB first
+ *
+ * \return 0 Success
+ * \return -1 Failure
+ */
+static int8_t phy_set_mac_address_match(uint8_t *address)
+{
+    uint64_t mac;
+    for (int byte = 0; byte < 8; byte++)
+    {
+        mac |= address[byte] << (8 - 1 - byte);
+    }
+
+    return phy_set_pib_attribute(gPhyPibLongAddress_c, mac);
+  
+}
+
+/*
+ * \brief Set MAC short address to be used by the PHY's source address matching feature.
+ *
+ * \param Pointer to address w/ MSB first
+ *
+ * \return 0 Success
+ * \return -1 Failure
+ */
+static int8_t phy_set_short_mac_address_match(uint8_t *address)
+{
+    uint64_t shortMac = adress[0] << 8 | address[1];
+
+    return phy_set_pib_attribute(gPhyPibShortAddress_c, shortMac);
+}
+
+/*
+ * \brief Set PAN id to be used by the PHY's source address matching feature.
+ *
+ * \param Pointer to address w/ MSB first
+ *
+ * \return 0 Success
+ * \return -1 Failure
+ */
+static int8_t phy_set_pan_id_address_match(uint8_t *address)
+{ 
+    uint64_t panId = adress[0] << 8 | address[1];
+
+    return phy_set_pib_attribute(gPhyPibPanId_c, panId);
+}
 
 /*
  * \brief 
@@ -485,27 +585,21 @@ void NanostackRfPhyKw41z::set_mac_address(uint8_t *mac)
  * \return 0 Success
  * \return -1 Failure
  */
-static int8_t rf_check_and_set_channel(int8_t newChannel)
+static int8_t phy_check_and_set_channel(int8_t newChannel)
 {
 
-    int8_t ret_val = 0;
+    int8_t retVal = 0;
     
     if (current_channel != newChannel)
-    {  
-        if(newChannel >= 11 && newChannel <= 26) {
-
-            current_channel = newChannel;
+    { 
+        current_channel = newChannel;
             
-            /* Update PHY with new channel */     
-            phy_set_pib_attribute(gPhyPibCurrentChannel_c, newChannel);
-        } 
-        else 
-        {
-            ret_val = -1;
-        }
+        /* Update PHY with new channel */     
+         retVal = phy_set_pib_attribute(
+             gPhyPibCurrentChannel_c, newChannel);      
     }
 
-    return ret_val;
+    return retVal;
 }
 
 /*
@@ -538,14 +632,14 @@ static uint64_t phy_get_pib_attribute(phyPibId_t attribute)
 {
     plmeGetReq_t req;
     uint64_t value;
-    int8_t ret_val;
+    int8_t retVal;
 
     req.PibAttribute = attribute;
     req.pPibAttributeValue = &value;
     
-    ret_val = phy_pib_request(NULL, req);
+    retVal = phy_pib_request(NULL, req);
 
-    return ret_val == 0 ? value : -1;
+    return retVal == 0 ? value : -1;
 }
 
 /*
@@ -707,7 +801,7 @@ static int8_t phy_measure_channel_energy(uint8_t *energyToSet)
     macToPlmeMessage_t msg;
     phyStatus_t result;
     uint8_t energy;
-    int8_t ret_val;
+    int8_t retVal;
 
     msg.macInstance = mac_instance_id;
     msg.msgType = gPlmeEdReq_c;
