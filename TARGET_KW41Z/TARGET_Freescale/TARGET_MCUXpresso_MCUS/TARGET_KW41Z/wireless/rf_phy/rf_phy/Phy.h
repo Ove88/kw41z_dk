@@ -172,6 +172,37 @@ void PhyHwInit
   void 
 );
 
+
+/*! *********************************************************************************
+* \brief  Control the source address matching feature
+*
+* De-activating automatically activates manual control over frame pending bit
+*
+* \param[in]  active    TRUE - Activate feature
+*                       FALSE - de-activate feature
+*
+********************************************************************************** */
+void PhyPpSetSrcAddrMatchFeature
+(
+
+);
+
+/*! *********************************************************************************
+* \brief  Manual control of the frame pending bit set in the auto ACK sent
+* after a data request frame has been received 
+* Must be activated by setting the ACK_FRM_PND_CTRL bit
+* Added to accommodate the mbed Thread stack interface 
+*
+* \param[in]  pending TRUE - frame is pending
+*                     FALSE - frame is not pending
+*
+********************************************************************************** */
+void PhyPpSetFramePending
+(
+  bool_t pending
+);
+
+
 /*! *********************************************************************************
  * \brief  Enable/Disable the XCVR promiscuous mode. 
  *         In promiscuous mode, all filtering except CRC are disabled

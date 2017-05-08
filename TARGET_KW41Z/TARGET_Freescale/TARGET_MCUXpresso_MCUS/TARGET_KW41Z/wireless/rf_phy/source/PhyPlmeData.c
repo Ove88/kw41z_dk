@@ -599,6 +599,21 @@ phyStatus_t PhyPlmeSetPIBRequest(phyPibId_t pibId, uint64_t pibValue, uint8_t ph
         result = gPhyReadOnly_c;
     }
     break;
+
+    /* Added to accommodate the mbed Thread stack interface */
+    case gPhyPibSrcAddrEnable_c: 
+    {
+        PhyPpSetFramePending(pibValue);
+    }
+    break;
+    
+    /* Added to accommodate the mbed Thread stack interface */
+    case gPhyPibSrcAddrEnable_c:
+    {
+        PhyPpSetSrcAddrMatchFeature(pibValue);
+    }
+    break;
+
     default:
     {
         result = gPhyUnsupportedAttribute_c;
