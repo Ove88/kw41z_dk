@@ -434,42 +434,6 @@ phyStatus_t PhyPpSetMacRole
 }
 
 /*! *********************************************************************************
-* \brief  Control the source address matching feature
-*
-* De-activating automatically activates manual control over frame pending bit
-*
-* \param[in]  active    TRUE - Activate feature
-*                       FALSE - de-activate feature
-*
-********************************************************************************** */
-void PhyPpSetSrcAddrMatchFeature(bool_t active)
-{
-     /* Disable Source Addresing Match module */
-    ZLL->SAM_CTRL &= ~ZLL_SAM_CTRL_SAP0_EN_MASK;
-    ZLL->SAM_CTRL &= ~ZLL_SAM_CTRL_SAA0_EN_MASK;
-    ZLL->SAM_CTRL &= ~ZLL_SAM_CTRL_SAP1_EN_MASK;
-    ZLL->SAM_CTRL &= ~ZLL_SAM_CTRL_SAA1_EN_MASK;
-
-    // ZLL->SAM_CTRL |= ZLL_SAM_CTRL_SAP0_EN(active);
-    // ZLL->SAM_CTRL |= ZLL_SAM_CTRL_SAA0_EN_MASK;
-    // ZLL->SAM_CTRL |= ZLL_SAM_CTRL_SAP1_EN_MASK;
-    // ZLL->SAM_CTRL |= ZLL_SAM_CTRL_SAA1_EN_MASK;    
-}
-
-/*! *********************************************************************************
-* \brief  Manual control of the frame pending bit set in the auto ACK sent
-* after a data request frame has been received
-*
-* \param[in]  Whether a frame is pending or not
-*
-********************************************************************************** */
-void PhyPpSetFramePending(bool_t pending)
-{
-    ZLL->SAM_CTRL &= ~ZLL_SAM_TABLE_ACK_FRM_PND_MASK;
-    ZLL->SAM_CTRL |= ZLL_SAM_TABLE_ACK_FRM_PND(pending);
-}
-
-/*! *********************************************************************************
 * \brief  Set the PHY in Promiscuous mode
 *
 * \param[in]  mode
