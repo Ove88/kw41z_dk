@@ -599,18 +599,22 @@ phyStatus_t PhyPlmeSetPIBRequest(phyPibId_t pibId, uint64_t pibValue, uint8_t ph
         result = gPhyReadOnly_c;
     }
     break;
-
     /* Added to accommodate the mbed Thread stack interface */
-    case gPhyPibSrcAddrEnable_c: 
+    case gPhyPibLastRxAckFP_c:
     {
-        PhyPpSetFramePending(pibValue);
+        result = gPhyReadOnly_c;
+    }
+    /* Added to accommodate the mbed Thread stack interface */
+    case gPhyPibAckFramePending_c: 
+    {
+        PhyPpSetFpManually(pibValue);
     }
     break;
     
     /* Added to accommodate the mbed Thread stack interface */
     case gPhyPibSrcAddrEnable_c:
     {
-        PhyPpSetSrcAddrMatchFeature(pibValue);
+        PhyPpSetSAMState(pibValue);
     }
     break;
 
@@ -726,6 +730,12 @@ phyStatus_t PhyPlmeGetPIBRequest(phyPibId_t pibId, uint64_t * pibValue, uint8_t 
       case gPhyPibLastTxAckFP_c:
       {
           value = !!(phyLocal.flags & gPhyFlagTxAckFP_c);
+      }
+      break;
+      /* Added to accommodate the mbed Thread stack interface */
+      case gPhyPibLastRxAckFP_c:
+      {
+          value = PhyPpIsRxAckDataPending();
       }
       break;
       default:

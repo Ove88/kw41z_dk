@@ -218,7 +218,7 @@ typedef enum
     gPhyReadOnly_c             = 0x0b,    /*!< A SET request was issued with the identifier of an attribute that is read-only.*/
     gPhyIndexUsed_c            = 0x11,    /*!< The indirect queue insert operation has detected an used index.*/
     gPhyNoAck_c                = 0x14,    /*!< No ACK was received for the last transmission.*/
-    gPhyFramePending_c         = 0x15,	  /*!< The ACK of a Data Request frame indicates a pending frame in the coordinator’s indirect TX queue.*/
+    gPhyFramePending_c         = 0x15,	  /*!< The ACK of a Data Request frame indicates a pending frame in the coordinatorï¿½s indirect TX queue.*/
     gPhyBusy_c                 = 0xF1,    /*!< The current request cannot be handled, because the PHY is busy. */
     gPhyInvalidPrimitive_c     = 0xF2     /*!< The set was not completed, because the primitive is not in the valid range. */
 }phyStatus_t;
@@ -274,11 +274,11 @@ typedef enum
     gPhyPibCurrentChannel_c  = 0x00,       /*!< The channel currently used.*/
     gPhyPibCurrentPage_c     = 0x01,       /*!< The channel page currently used.*/
     gPhyPibTransmitPower_c   = 0x02,       /*!< The power used for TX operations.*/
-    gPhyPibLongAddress_c     = 0x03,       /*!< The MAC long address to be used by the PHY’s source address matching feature.*/
-    gPhyPibShortAddress_c    = 0x04,       /*!< The MAC short address to be used by the PHY’s source address matching feature.*/
-    gPhyPibPanId_c           = 0x05,       /*!< The MAC PAN ID to be used by the PHY’s source address matching feature.*/
+    gPhyPibLongAddress_c     = 0x03,       /*!< The MAC long address to be used by the PHYï¿½s source address matching feature.*/
+    gPhyPibShortAddress_c    = 0x04,       /*!< The MAC short address to be used by the PHYï¿½s source address matching feature.*/
+    gPhyPibPanId_c           = 0x05,       /*!< The MAC PAN ID to be used by the PHYï¿½s source address matching feature.*/
     gPhyPibPanCoordinator_c  = 0x06,       /*!< Indicates if the device is a PAN coordinator or not.*/
-    gPhyPibSrcAddrEnable_c   = 0x07,       /*!< Enables or disables the PHY’s source address matching feature.*/
+    gPhyPibSrcAddrEnable_c   = 0x07,       /*!< Enables or disables the PHYï¿½s source address matching feature.*/
     gPhyPibPromiscuousMode_c = 0x08,       /*!< Selects between normal, promiscuous and active promiscuous mode.*/
     gPhyPibAutoAckEnable_c   = 0x09,       /*!< Enables or disables automatic transmission of ACK frames.*/
     gPhyPibFrameVersion_c    = 0x0A,       /*!< Used in checking for allowed frame versions (0x00 - any version accepted, 0x01 - accept Frame Version 0 packets (2003 compliant), 0x02 - accept Frame Version 1 packets (2006 compliant), 0x03 - accept Frame Version 0 and 1 packets).*/
@@ -292,13 +292,14 @@ typedef enum
     gPhyPibCurrentMode_c            = 0x20, /*!< Used to set or get the current operating PHY mode. Only for Sub-1 GHz PHY. */
     gPhyPibFSKPreambleRepetitions_c = 0x21, /*!< Used to set or get the number of 1 octet patterns in the preamble. Only for Sub-1 GHz PHY. */
     gPhyPibFSKScramblePSDU_c        = 0x22, /*!< Enables or disables the data whitening feature. Only for Sub-1 GHz PHY. */
-    gPhyPibCCADuration_c            = 0x23, /*!< Set or get the CCA duration specified in symbols. The valid range is 8 – 1000. Only for Sub-1 GHz PHY. */
+    gPhyPibCCADuration_c            = 0x23, /*!< Set or get the CCA duration specified in symbols. The valid range is 8 ï¿½ 1000. Only for Sub-1 GHz PHY. */
     gPhyPibCSLRxEnabled_c           = 0x24, /*!< Enable or disable the CSL mode for the RX sequences.  */
     gPhyPibFreqBandId_c             = 0x25, /*!< Sub-1 GHz Frequency Band Identifier. */
     gPhyPibAckWaitDuration_c        = 0x26, /*!< ACK receiver on period. */
     gPhyPibTschEnabled_c            = 0x27, /*!< Enable or disable TSCH. */
-    gPhyPibTschTimeslotInfo_c       = 0x28  /*!< The TSCH timings inside a timeslot. */
-#endif  /* gPHY_802_15_4g_d */
+    gPhyPibTschTimeslotInfo_c       = 0x28,  /*!< The TSCH timings inside a timeslot. */
+#endif  /* gPHY_802_15_4g_d */  
+    gPhyPibLastRxAckFP_c            = 0x29  /*!< Indicates, whether the last received packet had the frame pending flag set. */
 }phyPibId_t;
 
 typedef union phyFlags_tag
@@ -364,7 +365,7 @@ typedef union phyPHR_tag
 }phyPHR_t;
 
 /*! This type is used to enumerate all the PHY modes available. 
-    The available PHY modes depend on the selected Frequency Band (See 0 – IEEE Standard for Local and metropolitan area networks). */
+    The available PHY modes depend on the selected Frequency Band (See 0 ï¿½ IEEE Standard for Local and metropolitan area networks). */
 typedef enum{
     gPhyMode1_c = 0x00, 
     gPhyMode2_c = 0x01, 
