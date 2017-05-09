@@ -34,10 +34,45 @@ static phy_device_channel_page_s phy_channel_pages[] = {
     {CHANNEL_PAGE_0, NULL}
 };
 
+/**
+ * @struct PHY_Config_t
+ * @brief Configuration structure for IEEE 802.15.4 PHY layer
+ */
+typedef struct PHY_Config {
+  /**
+   * Set promiscuous operational mode. 
+   */
+  bool promiscuousMode;
+  /**
+   * Set whether the device is a PAN Coordinator during configuration.
+   */
+  bool isPanCoordinator;
+  /**
+   * Set which 802.15.4 frame types will be received, of Beacon, Data, Ack, and
+   * Command.
+   */
+  uint8_t framesMask;
+  /**
+   * Defines if the radio should enable RX mode in IDLE mode as well.
+   */
+  bool rxOnWhenIdle;
+  /**
+   * Enable or disable the source address matching feature.
+   */
+  bool srcAddrEnable;
+   /**
+   * Enable or disable auto Ack hardware feature.
+   */
+  bool autoAckEnable;
+  /**
+   * Define the number of symbols the RX should be on after receiving an ACK with FP=1
+   */
+  uint16_t frameWaitTime;
+} PHY_Config_t;
 
 typedef enum {
     STATE_SLEEP,
-    STATE_IDLE,
+   // STATE_IDLE,
     STATE_TX,
     STATE_RX,
     STATE_CALIBRATION
@@ -55,6 +90,17 @@ static int8_t current_channel = -1;
 static radio_state_t radio_state = RADIO_IDLE;
 static const instanceId_t mac_instance_id = 0, phy_instance_id = 1;
 static edConf_t lastEdCnf;
+
+static PHY_Config_t defaultConfig = 
+{
+    .promiscuousMode = false, 
+    .isPanCoordinator = false,
+    .frameMask = 0x00, 
+    .rxOnWhenIdle = true,
+    .srcAddrEnable = false,
+    .autoAckEnable = true,
+    .frameWaitTime = gPhyMaxFrameDuration_c
+};
 
 /* ARM_NWK_HAL prototypes */
 
@@ -80,7 +126,7 @@ static int8_t   phy_trx_state_request(phyState_t state);
 static int8_t   phy_request_rx_state();
 static int8_t   phy_request_idle_state();
 static void     phy_force_idle_state();
-static int8_t   phy_measure_channel_energy(uint8_t *energyToSet);
+static int8_t   phy_measure_channel_energy(uint8_t *measuredEnergyLevel);
 static int8_t   phy_pib_request(plmeSetReq_t *setRequest, plmeGetReq_t *getRequest);
 static uint64_t phy_get_pib_attribute(phyPibId_t attribute);
 static int8_t   phy_set_pib_attribute(phyPibId_t attribute, uint64_t value);
@@ -88,7 +134,9 @@ static int8_t   phy_set_mac_address_match(uint8_t *address);
 static int8_t   phy_set_short_mac_address_match(uint8_t *address);
 static int8_t   phy_set_pan_id_address_match(uint8_t *address);
 static int8_t   phy_check_and_set_channel(int8_t newChannel);
-static int8_t   phy_check_last_ack_frame_pending();
+static int8_t   phy_check_last_recv_ack_frame_pending();
+static int8_t   phy_manual_set_ack_frame_pending(bool set);
+static int8_t   phy_set_promiscuous_mode(bool set);
 
 /*============ ARM_NWK_HAL functions ============*/
 
@@ -105,19 +153,14 @@ int8_t rf_start_cca(uint8_t *data_ptr, uint16_t data_length, uint8_t tx_handle, 
 {
   
     /* Check if transmitter is busy */
-    if (radio_state != STATE_IDLE)
+    if (radio_state != STATE_RX)
     {
         /* Return busy */
         return -1;
     }
     else
-    {
-        /* Check if transmitted data needs to be ACKed */
-        if (*data_ptr & 0x20)
-           ack_requested = 1;
-        else
-           ack_requested = 0;
-        
+    {     
+        current_tx_handle = tx_handle;
 
         /* Start CCA and TX process */
         phy_cca_tx_request(data_ptr, data_length);
@@ -158,16 +201,20 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
     switch (new_state)
     {
         /* Reset PHY driver and set to idle */
+        // REVIEW: Currently receiver is put in sleep mode. does this work as intended?
         case PHY_INTERFACE_RESET:
            
             phy_force_idle_state();
             
-            radio_state = STATE_IDLE;
+             /* Set radio in low power mode */
+            PhyPlmeSetPwrState(gPhyPwrDSM_c);
+            radio_state = STATE_SLEEP;
             
             break;
 
         /* Disable PHY Interface driver */
-        case PHY_INTERFACE_DOWN:
+        // REVIEW: Currently receiver is put in sleep mode. does this work as intended?
+        case PHY_INTERFACE_DOWN:  
             
              /* Request idle state */
             retVal = phy_request_idle_state();
@@ -183,27 +230,34 @@ static int8_t rf_interface_state_control(phy_interface_state_e new_state, uint8_
 
         /* Enable PHY Interface driver */
         case PHY_INTERFACE_UP:
-            
+        /* Enable wireless interface ED scan mode */
+        case PHY_INTERFACE_RX_ENERGY_STATE:
+
             /* Power up radio module if not already idle */
             PhyPlmeSetPwrState(gPhyPwrIdle_c); 
            
             /* Request radio RX state */
+            phy_check_and_set_channel(rf_channel);
             retVal = phy_management_request(REQUEST_RX_STATE); 
             
             if (retVal == 0) 
             {
-                radio_state = STATE_RX;
-                phy_check_and_set_channel(rf_channel);
+                radio_state = STATE_RX;                
             }
             
             break;
 
-        /* Enable wireless interface ED scan mode */
-        case PHY_INTERFACE_RX_ENERGY_STATE:
-            break;
-
         /* Enable Sniffer state */
-        case PHY_INTERFACE_SNIFFER_STATE:
+        case PHY_INTERFACE_SNIFFER_STATE: 
+            
+            phy_check_and_set_channel(rf_channel);
+            phy_set_promiscuous_mode(true);
+            retVal = phy_management_request(REQUEST_RX_STATE); 
+            
+            if (retVal == 0) 
+            {
+                radio_state = STATE_RX;                
+            }
             break;
     }
 
@@ -227,16 +281,15 @@ static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_pt
     switch (extension_type)
     {
         /* Control MAC pending bit for Indirect data transmission */
-        case PHY_EXTENSION_CTRL_PENDING_BIT:    //TODO: Data last ack pending..
+        case PHY_EXTENSION_CTRL_PENDING_BIT:
 
-        if (*data_ptr) data_pending = true;
-        else data_pending = false;
-        break;
+            phy_manual_set_ack_frame_pending(*data_ptr);
+            break;
 
         /* Return frame pending status */
-        case PHY_EXTENSION_READ_LAST_ACK_PENDING_STATUS: //TODO:
+        case PHY_EXTENSION_READ_LAST_ACK_PENDING_STATUS:
 
-            *data_ptr = phy_get_pib_attribute(gPhyPibLastTxAckFP_c);
+            *data_ptr = phy_check_last_recv_ack_frame_pending();
             break;
 
         /* Set channel, used for setting channel for energy scan */
@@ -247,14 +300,15 @@ static int8_t rf_extension(phy_extension_type_e extension_type, uint8_t *data_pt
 
         /* Read energy on the channel */
         case PHY_EXTENSION_READ_CHANNEL_ENERGY:
-           
-             retVal = phy_measure_channel_energy(data_ptr);
+          
+            retVal = phy_measure_channel_energy(data_ptr);
             break;
 
         /* Read status of the link */
-        case PHY_EXTENSION_READ_LINK_STATUS:
+        case PHY_EXTENSION_READ_LINK_STATUS: // TODO: Implement?
          
-           //*data_ptr = rf_get_link_status();
+            //*data_ptr = rf_get_link_status();
+            retVal = -1;
             break;
     }
     return retVal;
@@ -321,6 +375,8 @@ static int8_t rf_device_register(void)
     /* Do some initialization */
     Phy_Init();
     BindToPHY(mac_instance_id);
+    phy_config(&defaultConfig);
+
     /* Get real MAC address */
     /* MAC is stored MSB first */
     memcpy(mac_address, (const void*)RSIM->MAC_MSB, 4);
@@ -462,50 +518,6 @@ void NanostackRfPhyKw41z::set_mac_address(uint8_t *mac)
 //====================== Phy layer interface functions and callbacks =========================
 
 
-/**
- * @struct PHY_Config_t
- * @brief Configuration structure for IEEE 802.15.4 PHY layer
- */
-typedef struct PHY_Config {
-  /**
-   * Enable promiscuous mode during configuration. This can be overridden via
-   * RAIL_IEEE802154_SetPromiscuousMode() afterwards.
-   */
-  bool promiscuousMode;
-  /**
-   * Set whether the device is a PAN Coordinator during configuration. This can
-   * be overridden via RAIL_IEEE802154_SetPanCoordinator() afterwards.
-   */
-  bool isPanCoordinator;
-  /**
-   * Set which 802.15.4 frame types will be received, of Beacon, Data, Ack, and
-   * Command. This setting can be overridden via RAIL_IEEE802154_AcceptFrames().
-   */
-  uint8_t framesMask;
-  /**
-   * Defines the default radio state after a transmit operation (transmit
-   * packet, wait for ack) or a receive operation (receive packet, transmit
-   * ack) finishes.
-   */
-  RAIL_RadioState_t defaultState;
-  /**
-   * Define the idleToRx and idleToTx time
-   * This defines the time it takes for the radio to go into RX or TX from an
-   * idle radio state
-   */
-  uint16_t idleTime;
-  /**
-   * Define the turnaround time after receiving a packet and transmitting an
-   * ack and vice versa
-   */
-  uint16_t turnaroundTime;
-  /**
-   * Define the ack timeout time in microseconds
-   */
-  uint16_t ackTimeout;
-} PHY_Config_t;
-
-
 /*
  * \brief Init the PHY layer with the given parameters
  *
@@ -514,18 +526,61 @@ typedef struct PHY_Config {
  * \return 0 Success
  * \return -1 Failure
  */
- static int8_t phy_init(PHY_Config_t *param)
+ static int8_t phy_config(PHY_Config_t *param)
  {
+     phy_set_pib_attribute(gPhyPibPromiscuousMode_c, param->promiscuousMode);
      phy_set_pib_attribute(gPhyPibPanCoordinator_c, param->isPanCoordinator);
-     phy_set_pib_attribute(gPhyPibSrcAddrEnable_c,);
-     phy_set_pib_attribute(gPhyPibPromiscuousMode_c);
-     phy_set_pib_attribute(gPhyPibFrameEnable_c);
-     phy_set_pib_attribute(gPhyPibFrameVersion_c );
-     phy_set_pib_attribute(gPhyPibRxOnWhenIdle );
-     phy_set_pib_attribute(gPhyPibFrameWaitTime_c  );
-     phy_set_pib_attribute(gPhyPibRxOnWhenIdle );
-     phy_set_pib_attribute(gPhyPibAutoAckEnable_c );
+     phy_set_pib_attribute(gPhyPibFrameVersion_c, param->framesMask);
+     phy_set_pib_attribute(gPhyPibRxOnWhenIdle, param->rxOnWhenIdle);
+     phy_set_pib_attribute(gPhyPibSrcAddrEnable_c, param->srcAddrEnable);
+     phy_set_pib_attribute(gPhyPibAutoAckEnable_c, param->autoAckEnable);
+     phy_set_pib_attribute(gPhyPibFrameWaitTime_c, param->frameWaitTime);
+
+     phy_set_pib_attribute(gPhyPibFrameEnable_c, 1); /* Enable reception of MAC frames */
+
+     return 0;  
  }
+
+/*
+ * \brief Manually set the frame pending bit to be set in the next auto ACK
+ * in response to a received data request. Note: Source address matching must be disabled.
+ *
+ * \param set   TRUE - set the bit active
+ *              FALSE - set the bit inactive
+ *
+ * \return 0 Success
+ * \return -1 Failure
+ */
+static int8_t phy_manual_set_ack_frame_pending(bool set)
+{
+    return phy_set_pib_attribute(gPhyPibAckFramePending_c, set);
+}
+
+/*
+ * \brief Check if the last received ACK had the frame pending bit set
+ *
+ * \param
+ *
+ * \return 1 Set
+ * \return 0 Not set
+ */
+static int8_t phy_check_last_recv_ack_frame_pending()
+{
+    return phy_get_pib_attribute(gPhyPibLastRxAckFP_c);
+}
+
+/*
+ * \brief Activate or de-activate radio promiscuous mode
+ *
+ * \param set
+ *
+ * \return 0 Success
+ * \return -1 Failure
+ */
+static int8_t phy_set_promiscuous_mode(bool set)
+{
+    return phy_set_pib_attribute(gPhyPibPromiscuousMode_c, set);
+}
 
 /*
  * \brief Set MAC long address to be used by the PHY's source address matching feature.
@@ -709,15 +764,18 @@ static int8_t phy_cca_tx_request(uint8_t *data, uint8_t dataLength)
 {
     macToPdDataMessage_t msg;
 
+    /* Check if transmitted data needs to be ACKed */
+    (*data & 0x20) ? ack_requested = 1 : ack_requested = 0;
+   
     msg.macInstance = mac_instance_id;
     msg.msgType = gPdDataReq_c; /* Define data request message type */
 
     msg.msgData.dataReq.startTime = gPhySeqStartAsap_c;
-    msg.msgData.dataReq.txDuration = 0; // ?? The computed duration for the Data Request frame
+    msg.msgData.dataReq.txDuration = gPhyMaxFrameDuration_c; // ?? The computed duration for the Data Request frame
     msg.msgData.dataReq.slottedTx = gPhyUnslottedTx_c; /* One CCA operation is performed */
     msg.msgData.dataReq.CCABeforeTx = gPhyCCAMode1_c; /* One CCA operation is performed */
-    msg.msgData.dataReq.ackRequired = (*data & 0x20) ? gPhyRxAckRqd_c : gPhyNoAckRqd_c;
-    msg.msgData.dataReq.psduLength = dataLength;
+    msg.msgData.dataReq.ackRequired = ack_requested ? gPhyRxAckRqd_c : gPhyNoAckRqd_c;
+    msg.msgData.dataReq.psduLength = dataLength; 
     msg.msgData.dataReq.pPsdu = data;
 
     /* Request to transfer message */
@@ -781,7 +839,7 @@ static int8_t phy_trx_state_request(phyState_t state)
     msg.msgData.setTRxStateReq.state = state;
     msg.msgData.setTRxStateReq.slottedMode = gPhyUnslottedTx_c;
     msg.msgData.setTRxStateReq.startTime = gPhySeqStartAsap_c;
-    msg.msgData.setTRxStateReq.rxDuration = 0; /* ?? If the requested state is Rx, then Rx will be enabled for rxDuration symbols.*/
+    msg.msgData.setTRxStateReq.rxDuration = gPhyMaxFrameDuration_c; /* ?? If the requested state is Rx, then Rx will be enabled for rxDuration symbols.*/
 
     result = MAC_PLME_SapHandler(&msg, phy_instance_id);
 
@@ -789,14 +847,14 @@ static int8_t phy_trx_state_request(phyState_t state)
 }
 
 /*
- * \brief 
+ * \brief Invoke PHY layer ED measurement request.
  *
- * \param Invoke PHY layer ED measurement request.
+ * \param measuredEnergyLevel The energy level is put into this parameter
  *
  * \return 0  : Success
  * \return -1 : Failure
  */
-static int8_t phy_measure_channel_energy(uint8_t *energyToSet)
+static int8_t phy_measure_channel_energy(uint8_t *measuredEnergyLevel)
 {
     macToPlmeMessage_t msg;
     phyStatus_t result;
@@ -819,7 +877,7 @@ static int8_t phy_measure_channel_energy(uint8_t *energyToSet)
         lastEdCnf.newCnf = false;
 
         /* Get energy level and result of energy measurement */
-        *energyToSet = lastEdCnf.recvCnf.energyLevel;
+        *measuredEnergyLevel = lastEdCnf.recvCnf.energyLevel;
         result = lastEdCnf.recvCnf.status;
     }
 
@@ -841,7 +899,14 @@ phy_link_tx_status_e phy_tx_process_result(phyStatus_t phyResult)
     {
         case gPhySuccess_c:
             
-            if (ack_requested)
+            if (phy_check_last_recv_ack_frame_pending() > 0) 
+            {
+                /* The received ACK had the data pending bit set, 
+                 * indicating that data is available */
+
+                 txStatus = PHY_LINK_TX_DONE_PENDING; 
+            }
+            else if (ack_requested)
             {
                 txStatus = PHY_LINK_TX_DONE;
             }
@@ -869,7 +934,7 @@ phy_link_tx_status_e phy_tx_process_result(phyStatus_t phyResult)
     }
 }
 
-/* TODO: Does PHY identify ack request or does auto ack need to be disabled?
+/* 
  * \brief PHY layer data message SAP handler 
  *
  * \param none
@@ -887,7 +952,7 @@ phyStatus_t phy_data_msg_sap_handler(
         /* Callback to MAC layer with received data */
         device_driver.phy_rx_cb(
             pMsg->msgData.dataInd.pPsdu,                /* Pointer to received data */
-            pMsg->msgData.dataInd.psduLength,           /* Number of bytes received */
+            pMsg->msgData.dataInd.psduLength - 2,       /* Number of bytes received - CRC (FCS field) */
             pMsg->msgData.dataInd.ppduLinkQuality,      /* Received LQI (link quality) */
             PhyConvertLQIToRSSI(
                 pMsg->msgData.dataInd.ppduLinkQuality), /* RSSI in dB */
@@ -895,17 +960,18 @@ phyStatus_t phy_data_msg_sap_handler(
         );
     }
 
-    /* Confirmation message for a previous request to transfer data */
+    /* Confirmation message for a previous data transfer */
     else if (pMsg->msgType == gPdDataCnf_c)
     {
         /* TX confirm callback to MAC layer */
         device_driver.phy_tx_done_cb(                              
             rf_radio_driver_id,                                     
             current_tx_handle,                                         
-            phy_tx_process_result(pMsg->msgData.dataCnf.status), /* TX confirm message */
+            phy_tx_process_result(pMsg->msgData.dataCnf.status),    /* TX confirm message */
             1,                                                      /* CCA retries */
             1                                                       /* TX retries */
         );
+        radio_state = RADIO_RX; /* Receiver is back in default state */
     }
 
     return gPhySuccess_c;
